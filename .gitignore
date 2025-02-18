@@ -5,5 +5,4 @@ server/node_modules
 
 # pnpm specific
 .pnpm-store/
-pnpm-lock.yaml
 .pnpm-debug.log
