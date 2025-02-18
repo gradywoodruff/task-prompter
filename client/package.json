@@ -10,7 +10,12 @@
   "main": "tailwind.config.js",
   "dependencies": {
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-markdown": "^8.0.7",
+    "remark-gfm": "^3.0.1",
+    "react-syntax-highlighter": "^15.5.0",
+    "@tailwindcss/typography": "^0.5.9",
+    "@headlessui/react": "^1.7.18"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",

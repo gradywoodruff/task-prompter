@@ -1,133 +1,140 @@
-import { useState, useEffect } from 'react'
+import { useState } from "react"
+import { Dialog } from "@headlessui/react"
 
 const TabManageModal = ({ isOpen, onClose, tabs, onSave }) => {
   const [editedTabs, setEditedTabs] = useState(tabs)
-  const [newTabName, setNewTabName] = useState('')
+  const [openDrawerId, setOpenDrawerId] = useState(null)
 
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') onClose()
-    }
-    
-    if (isOpen) {
-      window.addEventListener('keydown', handleEscape)
-      return () => window.removeEventListener('keydown', handleEscape)
-    }
-  }, [isOpen, onClose])
-
-  const handleDragStart = (e, index) => {
-    e.dataTransfer.setData('text/plain', index)
-  }
-
-  const handleDragOver = (e) => {
-    e.preventDefault()
-  }
-
-  const handleDrop = (e, dropIndex) => {
-    e.preventDefault()
-    const dragIndex = Number(e.dataTransfer.getData('text/plain'))
+  const handleTabChange = (index, field, value) => {
     const newTabs = [...editedTabs]
-    const [draggedTab] = newTabs.splice(dragIndex, 1)
-    newTabs.splice(dropIndex, 0, draggedTab)
+    newTabs[index] = { ...newTabs[index], [field]: value }
     setEditedTabs(newTabs)
   }
 
-  const handleNameChange = (index, newName) => {
-    const newTabs = [...editedTabs]
-    newTabs[index] = { ...newTabs[index], label: newName }
+  const handleAddTab = () => {
+    const newTab = {
+      id: `tab-${editedTabs.length + 1}`,
+      label: `New Tab ${editedTabs.length + 1}`,
+      placeholder: "Type your message here...",
+      prompt: "Enter instructions for the AI about this section..."
+    }
+    setEditedTabs([...editedTabs, newTab])
+    setOpenDrawerId(newTab.id) // Open the drawer for the new tab
+  }
+
+  const handleRemoveTab = index => {
+    const newTabs = editedTabs.filter((_, i) => i !== index)
     setEditedTabs(newTabs)
   }
 
-  const handleAddTab = (e) => {
-    e.preventDefault()
-    if (newTabName.trim()) {
-      const newTab = {
-        id: newTabName.toLowerCase().replace(/\s+/g, '-'),
-        label: newTabName,
-        placeholder: `Type your ${newTabName.toLowerCase()} here...`
-      }
-      setEditedTabs([...editedTabs, newTab])
-      setNewTabName('')
-    }
+  const handleSave = () => {
+    onSave(editedTabs)
   }
 
-  return isOpen ? (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="bg-white rounded-2xl p-6 w-96 max-h-[80vh] flex flex-col">
-        <h2 className="text-xl font-bold mb-4">Manage Tabs</h2>
-        
-        <form onSubmit={handleAddTab} className="mb-4">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newTabName}
-              onChange={(e) => setNewTabName(e.target.value)}
-              placeholder="New tab name..."
-              className="flex-1 p-2 border border-gray-200 rounded-lg font-mono text-sm focus:border-gray-400 focus:ring-0"
-            />
+  const toggleDrawer = id => {
+    setOpenDrawerId(openDrawerId === id ? null : id)
+  }
+
+  return (
+    <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+      <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <Dialog.Panel className="mx-auto max-w-2xl w-full bg-white rounded-2xl p-6">
+          <Dialog.Title className="text-xl font-bold mb-4">Manage Tabs</Dialog.Title>
+
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            {editedTabs.map((tab, index) => (
+              <div key={index} className="border rounded-lg">
+                {/* Tab Header */}
+                <div className="flex items-center p-4 bg-gray-50 rounded-t-lg">
+                  <input
+                    type="text"
+                    value={tab.label}
+                    onChange={e => handleTabChange(index, "label", e.target.value)}
+                    className="flex-1 px-2 py-1 border rounded mr-4"
+                    placeholder="Tab Label"
+                  />
+                  <button
+                    onClick={() => toggleDrawer(tab.id)}
+                    className="text-gray-500 hover:text-gray-700 mr-2"
+                  >
+                    {openDrawerId === tab.id ? "▼" : "▶"}
+                  </button>
+                  <button
+                    onClick={() => handleRemoveTab(index)}
+                    className="text-red-500 hover:text-red-700"
+                    disabled={editedTabs.length <= 1}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Drawer Content */}
+                <div
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    openDrawerId === tab.id ? "max-h-96" : "max-h-0"
+                  }`}
+                >
+                  <div className="p-4 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Placeholder Text
+                      </label>
+                      <input
+                        type="text"
+                        value={tab.placeholder}
+                        onChange={e =>
+                          handleTabChange(index, "placeholder", e.target.value)
+                        }
+                        className="w-full px-2 py-1 border rounded"
+                        placeholder="Enter placeholder text..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        AI Prompt
+                      </label>
+                      <textarea
+                        value={tab.prompt}
+                        onChange={e => handleTabChange(index, "prompt", e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg resize-none h-32"
+                        placeholder="Enter AI prompt instructions..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Add Tab Button */}
+          <button
+            onClick={handleAddTab}
+            className="mt-4 w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors duration-200"
+          >
+            + Add New Tab
+          </button>
+
+          <div className="mt-6 flex justify-end space-x-4">
             <button
-              type="submit"
-              disabled={!newTabName.trim()}
-              className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={onClose}
+              className="px-4 py-2 border rounded-lg hover:bg-gray-50"
             >
-              Add
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+            >
+              Save Changes
             </button>
           </div>
-        </form>
-
-        <div className="flex-1 overflow-y-auto">
-          {editedTabs.map((tab, index) => (
-            <div
-              key={tab.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, index)}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, index)}
-              className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg mb-2 cursor-move"
-            >
-              <div className="text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                value={tab.label}
-                onChange={(e) => handleNameChange(index, e.target.value)}
-                className="flex-1 bg-transparent border-none focus:ring-0 font-mono text-sm"
-              />
-              <button
-                onClick={() => setEditedTabs(editedTabs.filter((_, i) => i !== index))}
-                className="text-gray-400 hover:text-red-500"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onSave(editedTabs)}
-            className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
-          >
-            Save Changes
-          </button>
-        </div>
+        </Dialog.Panel>
       </div>
-    </div>
-  ) : null
+    </Dialog>
+  )
 }
 
-export default TabManageModal 
+export default TabManageModal
