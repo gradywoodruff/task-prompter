@@ -4,7 +4,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        mono: ['"Space Mono"', "monospace"]
+        mono: ['"Space Mono"', "monospace"],
+        sans: ["Jost", "sans-serif"],
+        "2xs": ["0.5rem", "0.625rem"]
       },
       fontSize: {
         "2xs": ["0.5rem", "0.625rem"]

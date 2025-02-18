@@ -1,8 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const TabManageModal = ({ isOpen, onClose, tabs, onSave }) => {
   const [editedTabs, setEditedTabs] = useState(tabs)
   const [newTabName, setNewTabName] = useState('')
+
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onClose()
+    }
+    
+    if (isOpen) {
+      window.addEventListener('keydown', handleEscape)
+      return () => window.removeEventListener('keydown', handleEscape)
+    }
+  }, [isOpen, onClose])
 
   const handleDragStart = (e, index) => {
     e.dataTransfer.setData('text/plain', index)
@@ -41,7 +52,10 @@ const TabManageModal = ({ isOpen, onClose, tabs, onSave }) => {
   }
 
   return isOpen ? (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
       <div className="bg-white rounded-2xl p-6 w-96 max-h-[80vh] flex flex-col">
         <h2 className="text-xl font-bold mb-4">Manage Tabs</h2>
         
