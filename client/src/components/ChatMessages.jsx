@@ -23,7 +23,7 @@ const ChatMessages = ({ messages, isLoading }) => {
             }`}
           >
             <div
-              className={` flex items-end gap-2 ${
+              className={`flex items-end gap-2 ${
                 message.role === "user"
                   ? "max-w-[90%] md:max-w-[70%] flex-row-reverse"
                   : "flex-row"
@@ -43,7 +43,14 @@ const ChatMessages = ({ messages, isLoading }) => {
                     {message.content}
                   </p>
                 ) : (
-                  <MarkdownMessage content={message.content} />
+                  <>
+                    <MarkdownMessage content={message.content} />
+                    {message.confidence !== undefined && (
+                      <div className="mt-2 text-xs text-gray-500">
+                        Confidence: {Math.round(message.confidence * 100)}%
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>

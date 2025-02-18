@@ -1,36 +1,19 @@
 import { useState } from "react"
 import MarkdownMessage from "./MarkdownMessage"
 
-const CopyPrompt = ({ messages, onEdit }) => {
+const CopyPrompt = ({ content, onEdit }) => {
   const [copied, setCopied] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editableContent, setEditableContent] = useState("")
 
-  const formatSection = sectionMessages => {
-    if (!sectionMessages?.length) return ""
-    return sectionMessages
-      .filter(msg => msg.role === "user")
-      .map(msg => msg.content)
-      .join("\n\n")
-  }
-
-  const formattedPrompt = Object.entries(messages)
-    .map(([section, msgs]) => {
-      const content = formatSection(msgs)
-      if (!content) return null
-      return `### ${section.charAt(0).toUpperCase() + section.slice(1)}\n${content}`
-    })
-    .filter(Boolean)
-    .join("\n\n")
-
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(formattedPrompt)
+    await navigator.clipboard.writeText(content)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
   const handleEdit = () => {
-    setEditableContent(formattedPrompt)
+    setEditableContent(content)
     setIsEditing(true)
   }
 
@@ -55,7 +38,7 @@ const CopyPrompt = ({ messages, onEdit }) => {
           />
         ) : (
           <MarkdownMessage
-            content={formattedPrompt || "Start chatting to build your prompt..."}
+            content={content || "Start chatting to build your prompt..."}
           />
         )}
       </div>

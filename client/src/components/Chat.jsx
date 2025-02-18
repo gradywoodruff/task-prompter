@@ -4,10 +4,12 @@ import ChatMessages from "./ChatMessages"
 
 const Chat = ({
   onMessagesUpdate,
+  onDocumentUpdate,
   tabs,
   onOpenModal,
   activeTab: externalActiveTab,
-  onActiveTabChange
+  onActiveTabChange,
+  currentDocument
 }) => {
   const [messages, setMessages] = useState({})
   const [isLoading, setIsLoading] = useState(false)
@@ -31,26 +33,71 @@ const Chat = ({
     onMessagesUpdate(messages)
   }, [messages, onMessagesUpdate])
 
+  const parseMarkdownToMessages = markdownText => {
+    const newMessages = { ...messages } // Start with existing messages to keep user history
+
+    // Split the markdown into sections
+    const sections = markdownText.split(/(?=###\s+[A-Z])/)
+
+    sections.forEach(section => {
+      if (!section.trim()) return
+
+      const match = section.match(/^###\s+([A-Za-z]+)\s*\n([\s\S]*)$/)
+      if (!match) return
+
+      const [, sectionName, content] = match
+      const sectionKey = sectionName.toLowerCase()
+
+      // Keep existing messages but update or add the AI response
+      if (!newMessages[sectionKey]) {
+        newMessages[sectionKey] = []
+      }
+
+      // Find the last AI message
+      const lastAiIndex = [...newMessages[sectionKey]]
+        .reverse()
+        .findIndex(msg => msg.role === "assistant")
+
+      if (lastAiIndex !== -1) {
+        // Update existing AI message
+        const actualIndex = newMessages[sectionKey].length - 1 - lastAiIndex
+        newMessages[sectionKey][actualIndex] = {
+          role: "assistant",
+          content: content.trim()
+        }
+      } else {
+        // Add new AI message
+        newMessages[sectionKey].push({
+          role: "assistant",
+          content: content.trim()
+        })
+      }
+    })
+
+    return newMessages
+  }
+
   useEffect(() => {
     const handleMessageSend = async event => {
       const { message, tab } = event.detail
 
-      // Update activeTab when message is sent
       setActiveTab(tab)
 
       // Add user message immediately
-      setMessages(prev => ({
-        ...prev,
+      const updatedMessages = {
+        ...messages,
         [tab]: [
-          ...(prev[tab] || []),
+          ...(messages[tab] || []),
           {
             role: "user",
             content: message
           }
         ]
-      }))
+      }
+      setMessages(updatedMessages)
 
       setIsLoading(true)
+
       try {
         const response = await fetch("http://localhost:3001/api/chat", {
           method: "POST",
@@ -60,8 +107,9 @@ const Chat = ({
           body: JSON.stringify({
             prompt: message,
             section: tab,
-            systemPrompt:
-              "Please format your responses using Markdown. Use code blocks with language specifications for code snippets, and utilize other Markdown features like lists, tables, and emphasis where appropriate."
+            allMessages: updatedMessages,
+            currentDocument: currentDocument,
+            systemPrompt: "Please format your responses using Markdown."
           })
         })
 
@@ -71,20 +119,29 @@ const Chat = ({
 
         const data = await response.json()
 
-        // Add AI response
+        // Add AI's chat response to the messages
         setMessages(prev => ({
           ...prev,
           [tab]: [
             ...(prev[tab] || []),
             {
               role: "assistant",
-              content: data.message
+              content: data.message,
+              confidence: data.confidence
             }
           ]
         }))
+
+        // Update the document directly
+        onDocumentUpdate(data.document)
+
+        // If the AI suggests updating a different section, switch to it
+        if (data.section !== tab) {
+          setActiveTab(data.section)
+          onActiveTabChange(data.section)
+        }
       } catch (error) {
         console.error("Error sending message:", error)
-        // Add error message to chat
         setMessages(prev => ({
           ...prev,
           [tab]: [
@@ -103,7 +160,7 @@ const Chat = ({
 
     window.addEventListener("message-send", handleMessageSend)
     return () => window.removeEventListener("message-send", handleMessageSend)
-  }, [])
+  }, [messages, onActiveTabChange, currentDocument])
 
   // Handle tab changes from TabbedInput
   const handleTabChange = tabId => {

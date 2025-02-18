@@ -7,6 +7,7 @@ function App() {
   const [messages, setMessages] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("description")
+  const [formattedText, setFormattedText] = useState("")
   const [tabs, setTabs] = useState([
     {
       id: "description",
@@ -38,12 +39,6 @@ function App() {
     }
   ])
 
-  useEffect(() => {
-    if (isModalOpen) {
-      setTabs(prevTabs => [...prevTabs])
-    }
-  }, [isModalOpen])
-
   const handleSaveTabs = newTabs => {
     const updatedMessages = {}
     newTabs.forEach(tab => {
@@ -62,33 +57,8 @@ function App() {
     setIsModalOpen(false)
   }
 
-  const handlePromptEdit = editedContent => {
-    // Parse the markdown back into messages
-    const newMessages = {}
-    // Split on headers, keeping the delimiter
-    const sections = editedContent.split(/(?=###\s+[A-Za-z]+)/m)
-
-    sections.forEach(section => {
-      if (!section.trim()) return
-
-      // Extract header and content
-      const match = section.match(/^###\s+([A-Za-z]+)\s*\n([\s\S]*)$/)
-      if (!match) return
-
-      const [, sectionName, content] = match
-      const trimmedContent = content.trim()
-
-      if (trimmedContent) {
-        newMessages[sectionName.toLowerCase()] = [
-          {
-            role: "user",
-            content: trimmedContent
-          }
-        ]
-      }
-    })
-
-    setMessages(newMessages)
+  const handlePromptEdit = newContent => {
+    setFormattedText(newContent)
   }
 
   return (
@@ -96,14 +66,16 @@ function App() {
       <div className="min-h-screen w-2/5 bg-white px-4">
         <Chat
           onMessagesUpdate={setMessages}
+          onDocumentUpdate={setFormattedText}
           tabs={tabs}
           onOpenModal={() => setIsModalOpen(true)}
           activeTab={activeTab}
           onActiveTabChange={setActiveTab}
+          currentDocument={formattedText}
         />
       </div>
       <div className="sticky top-0 bottom-0 h-screen bg-gray-100 p-4 flex-1">
-        <CopyPrompt messages={messages} onEdit={handlePromptEdit} />
+        <CopyPrompt content={formattedText} onEdit={handlePromptEdit} />
       </div>
 
       {/* Modal at App level */}

@@ -71,9 +71,9 @@ async function startServer() {
     // AI response endpoint
     app.post("/api/chat", async (req, res) => {
       try {
-        const { prompt, section, model } = req.body
+        const { prompt, section, model, allMessages } = req.body
         console.log("Received chat request:", { prompt, section, model })
-        const response = await generateResponse(prompt, section, model)
+        const response = await generateResponse(prompt, section, model, allMessages)
         res.json(response)
       } catch (error) {
         console.error("Error in chat endpoint:", error)
