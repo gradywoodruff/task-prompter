@@ -1,18 +1,6 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import axios from "axios"
 
-// Move the client initialization inside the function
-let anthropic = null
-
-const initAnthropicClient = () => {
-  if (!anthropic) {
-    anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY
-    })
-  }
-  return anthropic
-}
-
 const SYSTEM_PROMPTS = {
   description: `You are a helpful AI assistant focused on helping users clarify their programming tasks. 
     Help them describe their task clearly and thoroughly.`,
@@ -34,9 +22,12 @@ Please respond in a single JSON object with no other text. Here is the format of
 }
 `
 
-const generateClaudeResponse = async (prompt, section, allMessages) => {
+const generateClaudeResponse = async (prompt, section, allMessages, apiKey) => {
   try {
-    const client = initAnthropicClient()
+    // Create a new client for each request using the provided key
+    const client = new Anthropic({
+      apiKey: apiKey
+    })
 
     // Format current document state
     const currentDocument = Object.entries(allMessages)
@@ -178,10 +169,7 @@ Remember: The "document" field maintains the document state, while the "chatResp
   }
 }
 
-const generateGPTResponse = async (prompt, section) => {
-  console.log("******************")
-  console.log("process.env.OPENAI_API_KEY")
-  console.log(process.env.OPENAI_API_KEY)
+const generateGPTResponse = async (prompt, section, apiKey) => {
   try {
     const response = await axios.post(
       "https://api.openai.com/v1/chat/completions",
@@ -201,7 +189,7 @@ const generateGPTResponse = async (prompt, section) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json"
         }
       }
@@ -222,10 +210,18 @@ export const generateResponse = async (
   prompt,
   section,
   model = "claude",
-  allMessages = {}
+  allMessages = {},
+  credentials = {}
 ) => {
-  if (model === "gpt") {
-    return generateGPTResponse(prompt, section)
+  // Determine which provider we need
+  const provider = model === "gpt" ? "openai" : "anthropic"
+
+  if (!credentials[provider]) {
+    throw new Error(`Missing API key for ${provider}`)
   }
-  return generateClaudeResponse(prompt, section, allMessages)
+
+  if (model === "gpt") {
+    return generateGPTResponse(prompt, section, credentials.openai)
+  }
+  return generateClaudeResponse(prompt, section, allMessages, credentials.anthropic)
 }

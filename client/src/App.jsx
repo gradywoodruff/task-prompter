@@ -2,6 +2,21 @@ import { useState, useEffect } from "react"
 import Chat from "./components/Chat"
 import CopyPrompt from "./components/CopyPrompt"
 import TabManageModal from "./components/TabManageModal"
+import { CredentialManager } from "ai-creds-manager"
+import { VscKey } from "react-icons/vsc"
+
+const services = [
+  {
+    id: "openai",
+    name: "OpenAI",
+    description: "Your OpenAI API key from platform.openai.com"
+  },
+  {
+    id: "anthropic",
+    name: "Anthropic",
+    description: "Your Anthropic API key for Claude models"
+  }
+]
 
 function App() {
   const [messages, setMessages] = useState({})
@@ -62,29 +77,44 @@ function App() {
   }
 
   return (
-    <div className="flex w-full">
-      <div className="min-h-screen w-2/5 bg-white px-4">
-        <Chat
-          onMessagesUpdate={setMessages}
-          onDocumentUpdate={setFormattedText}
+    <div className="grid grid-rows-[3rem_1fr] h-screen bg-gray-100 w-full">
+      <div className="flex justify-between items-center p-4">
+        <div>🦺</div>
+        <CredentialManager
+          services={services}
+          onCredentialsUpdate={creds => {
+            console.log("Credentials updated:", creds)
+          }}
+        >
+          <button className="text-black flex items-center">
+            <VscKey size={20} />
+          </button>
+        </CredentialManager>
+      </div>
+      <div className="flex w-full p-4 pt-0 gap-4">
+        <div className="w-2/5">
+          <Chat
+            onMessagesUpdate={setMessages}
+            onDocumentUpdate={setFormattedText}
+            tabs={tabs}
+            onOpenModal={() => setIsModalOpen(true)}
+            activeTab={activeTab}
+            onActiveTabChange={setActiveTab}
+            currentDocument={formattedText}
+          />
+        </div>
+        <div className="sticky flex-1 bottom-0 w-full bg-[linear-gradient(to_bottom,rgba(243,244,246,0),rgb(243,244,246)_44px)]">
+          <CopyPrompt content={formattedText} onEdit={handlePromptEdit} />
+        </div>
+
+        {/* Modal at App level */}
+        <TabManageModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
           tabs={tabs}
-          onOpenModal={() => setIsModalOpen(true)}
-          activeTab={activeTab}
-          onActiveTabChange={setActiveTab}
-          currentDocument={formattedText}
+          onSave={handleSaveTabs}
         />
       </div>
-      <div className="sticky top-0 bottom-0 h-screen bg-gray-100 p-4 flex-1">
-        <CopyPrompt content={formattedText} onEdit={handlePromptEdit} />
-      </div>
-
-      {/* Modal at App level */}
-      <TabManageModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        tabs={tabs}
-        onSave={handleSaveTabs}
-      />
     </div>
   )
 }

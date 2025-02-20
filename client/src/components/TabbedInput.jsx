@@ -163,7 +163,7 @@ const TabbedInput = ({ onOpenModal, tabs, activeTab, onTabChange }) => {
         </div>
 
         {/* Input Box */}
-        <div className="relative bg-white">
+        <div className="relative bg-white rounded-2xl rounded-tl-none">
           <div className="relative border-2 border-gray-200 rounded-2xl rounded-tl-none transition-colors duration-200 group-has-[textarea:focus]:border-gray-400 -mt-[2px]">
             <div className="grid grid-rows-[minmax(min-content,1fr),auto]">
               <div className="relative min-h-[104px] max-h-[50vh]">

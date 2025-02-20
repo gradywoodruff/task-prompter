@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react"
 import TabbedInput from "./TabbedInput"
 import ChatMessages from "./ChatMessages"
+import { useCredentials } from "ai-creds-manager"
 
 const Chat = ({
   onMessagesUpdate,
@@ -14,6 +15,7 @@ const Chat = ({
   const [messages, setMessages] = useState({})
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState("description")
+  const { getCredential } = useCredentials()
 
   // Sync internal activeTab with external
   useEffect(() => {
@@ -81,7 +83,26 @@ const Chat = ({
     const handleMessageSend = async event => {
       const { message, tab } = event.detail
 
+      // Get API keys from credential manager
+      const anthropicKey = getCredential("anthropic")
+      const openaiKey = getCredential("openai")
+
+      if (!anthropicKey) {
+        setMessages(prev => ({
+          ...prev,
+          [tab]: [
+            ...(prev[tab] || []),
+            {
+              role: "assistant",
+              content: "Please configure your Anthropic API key in the settings first."
+            }
+          ]
+        }))
+        return
+      }
+
       setActiveTab(tab)
+      setIsLoading(true)
 
       // Add user message immediately
       const updatedMessages = {
@@ -96,9 +117,8 @@ const Chat = ({
       }
       setMessages(updatedMessages)
 
-      setIsLoading(true)
-
       try {
+        // Send credentials with the request
         const response = await fetch("http://localhost:3001/api/chat", {
           method: "POST",
           headers: {
@@ -107,9 +127,13 @@ const Chat = ({
           body: JSON.stringify({
             prompt: message,
             section: tab,
+            model: "claude",
             allMessages: updatedMessages,
             currentDocument: currentDocument,
-            systemPrompt: "Please format your responses using Markdown."
+            credentials: {
+              anthropic: anthropicKey,
+              openai: openaiKey
+            }
           })
         })
 
@@ -160,7 +184,7 @@ const Chat = ({
 
     window.addEventListener("message-send", handleMessageSend)
     return () => window.removeEventListener("message-send", handleMessageSend)
-  }, [messages, onActiveTabChange, currentDocument])
+  }, [messages, onActiveTabChange, currentDocument, getCredential])
 
   // Handle tab changes from TabbedInput
   const handleTabChange = tabId => {
@@ -171,12 +195,12 @@ const Chat = ({
   return (
     <div className="flex flex-col h-full">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto rounded-tr-xl">
         <ChatMessages messages={messages[activeTab] || []} isLoading={isLoading} />
       </div>
 
       {/* Input area - fixed at bottom */}
-      <div className="sticky pb-4 bottom-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0),white_44px)]">
+      <div className="sticky bottom-0 bg-[linear-gradient(to_bottom,rgba(243,244,246,0),rgb(243,244,246)_44px)]">
         <TabbedInput
           tabs={tabs}
           onOpenModal={onOpenModal}

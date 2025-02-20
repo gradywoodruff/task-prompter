@@ -14,7 +14,7 @@ const ChatMessages = ({ messages, isLoading }) => {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="w-full space-y-6 py-4">
+      <div className="w-full space-y-6">
         {messages.map((message, index) => (
           <div
             key={index}
@@ -30,9 +30,9 @@ const ChatMessages = ({ messages, isLoading }) => {
               }`}
             >
               <div
-                className={`p-4 rounded-2xl ${
-                  message.role === "user" ? "bg-blue-600 text-white" : ""
-                }`}
+                className={
+                  message.role === "user" ? "p-4 rounded-2xl bg-blue-600 text-white" : ""
+                }
               >
                 {message.role === "user" ? (
                   <p

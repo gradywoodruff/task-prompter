@@ -1,8 +1,5 @@
 import express from "express"
 import cors from "cors"
-import dotenv from "dotenv"
-import path from "path"
-import { fileURLToPath } from "url"
 import { generateResponse } from "../services/ai-service.js"
 
 // Add process error handlers
@@ -18,33 +15,9 @@ process.on("unhandledRejection", error => {
 
 async function startServer() {
   try {
-    // Get directory paths
-    const __filename = fileURLToPath(import.meta.url)
-    const __dirname = path.dirname(__filename)
-    const rootDir = path.resolve(__dirname, "../../")
-
-    console.log("Root directory:", rootDir)
-    console.log("Env file path:", path.join(rootDir, ".env"))
-
-    // Configure dotenv to look in root directory
-    const result = dotenv.config({ path: path.join(rootDir, ".env") })
-
-    if (result.error) {
-      throw new Error(`Failed to load .env file: ${result.error.message}`)
-    }
-
-    // Debug log for env vars
-    console.log("Environment check on startup:", {
-      anthropicKey: !!process.env.ANTHROPIC_API_KEY,
-      openaiKey: !!process.env.OPENAI_API_KEY,
-      port: process.env.SERVER_PORT || 3001,
-      envKeys: Object.keys(process.env)
-    })
-
     const app = express()
     const port = process.env.SERVER_PORT || 3001
 
-    // Update CORS configuration
     app.use(
       cors({
         origin: "http://localhost:5173",
@@ -54,15 +27,6 @@ async function startServer() {
     )
     app.use(express.json())
 
-    // Add debug endpoint to check env vars
-    app.get("/api/debug", (req, res) => {
-      console.log("API Keys present:", {
-        anthropic: !!process.env.ANTHROPIC_API_KEY,
-        openai: !!process.env.OPENAI_API_KEY
-      })
-      res.json({ status: "ok" })
-    })
-
     // Basic health check endpoint
     app.get("/api/health", (req, res) => {
       res.json({ status: "ok" })
@@ -71,9 +35,32 @@ async function startServer() {
     // AI response endpoint
     app.post("/api/chat", async (req, res) => {
       try {
-        const { prompt, section, model, allMessages } = req.body
+        const { prompt, section, model = "claude", allMessages, credentials } = req.body
+
+        // Validate required fields
+        if (!prompt) {
+          throw new Error("Missing prompt")
+        }
+        if (!section) {
+          throw new Error("Missing section")
+        }
+        if (!credentials) {
+          throw new Error("Missing credentials")
+        }
+
+        const requiredProvider = model === "gpt" ? "openai" : "anthropic"
+        if (!credentials[requiredProvider]) {
+          throw new Error(`Missing API key for ${requiredProvider}`)
+        }
+
         console.log("Received chat request:", { prompt, section, model })
-        const response = await generateResponse(prompt, section, model, allMessages)
+        const response = await generateResponse(
+          prompt,
+          section,
+          model,
+          allMessages,
+          credentials
+        )
         res.json(response)
       } catch (error) {
         console.error("Error in chat endpoint:", error)
